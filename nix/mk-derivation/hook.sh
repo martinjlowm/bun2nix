@@ -35,8 +35,9 @@ EOF
   BUN_INSTALL_CACHE_DIR=$(mktemp -d)
   export BUN_INSTALL_CACHE_DIR
 
-  # Use -RL to dereference symlinks so bun finds actual directories
-  cp -r "$bunDeps"/share/bun-cache/. "$BUN_INSTALL_CACHE_DIR"
+  # Copy cache: --copy-unsafe-links dereferences symlinks pointing outside (to Nix store)
+  # but preserves symlinks pointing within the source tree
+  rsync -a --copy-unsafe-links "$bunDeps"/share/bun-cache/ "$BUN_INSTALL_CACHE_DIR"
 
   if ! [ -v bunRoot ]; then
     bunRoot=$(pwd)
