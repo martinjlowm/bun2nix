@@ -1,4 +1,8 @@
-{ lib, flake-parts-lib, ... }:
+{
+  lib,
+  flake-parts-lib,
+  ...
+}:
 let
   inherit (flake-parts-lib) mkPerSystemOption;
   inherit (lib) mkOption types;
@@ -69,6 +73,8 @@ in
           autoPatchElf ? false,
           nativeBuildInputs ? [ ],
           bunfigPath ? null,
+          # Map of package names to patch file paths
+          patchedDependencies ? { },
           ...
         }@args:
         let
@@ -92,6 +98,9 @@ in
               null;
           # Prefer scope config, fall back to URL
           registryHost = if registryFromScope != null then registryFromScope else registryFromUrl;
+          # Look up if there's a patch for this package
+          patchFile = patchedDependencies.${name} or null;
+          hasPatch = patchFile != null;
         in
         pkgs.stdenv.mkDerivation {
           name = "bun-pkg-${name}";
@@ -106,6 +115,7 @@ in
               stdenv.cc.cc.lib
             ]
           )
+          ++ lib.optionals hasPatch [ pkgs.patch ]
           ++ nativeBuildInputs;
 
           phases = [
@@ -127,6 +137,10 @@ in
           patchPhase = ''
             runHook prePatch
 
+            ${lib.optionalString hasPatch ''
+              echo "Applying patch for ${name}..."
+              patch -p1 -d "$out/share/bun-packages/${name}" < "${patchFile}"
+            ''}
             ${lib.optionalString patchShebangs ''patchShebangs "$out/share/bun-packages"''}
             ${lib.optionalString autoPatchElf ''runHook autoPatchelfPostFixup''}
 
