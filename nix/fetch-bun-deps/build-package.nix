@@ -145,8 +145,10 @@ in
             runHook postCacheEntry
           '';
 
-          preferLocalBuild = true;
-          allowSubstitutes = false;
+          # Allow substitutes so CI can cache bun-pkg derivations.
+          # These are pure (tarball → extract → patchShebangs → cache-entry)
+          # and benefit greatly from binary caching in large monorepos.
+          allowSubstitutes = true;
         };
     };
 }
